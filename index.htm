@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+      <script src="./pyodide/pyodide.js"></script>
+      <script type="text/javascript">
+        async function main(){
+          // Disable inputs
+          document.querySelectorAll("input").forEach(i => i.disabled = true) 
+
+          // Load Python
+          document.querySelector("#status").innerText = "Loading python..."
+          let pyodide = await loadPyodide();
+          document.querySelector("#status").innerText = "Loading ftfy..."
+          await pyodide.loadPackage("./ftfy-6.1.3-py3-none-any.whl");
+          await pyodide.loadPackage("./wcwidth-0.2.13-py2.py3-none-any.whl");
+          await pyodide.runPython('from ftfy import fix_and_explain')
+          document.querySelector("#status").innerText = "Ready."
+
+          // Enable inputs
+          document.querySelectorAll("input").forEach(i => i.disabled = false) 
+
+          document.querySelector("#submit").onclick = async function() {
+                document.querySelectorAll("input").forEach(i => i.disabled = true) 
+                document.querySelector("#status").innerText = "Decoding..."
+                
+                const locals = pyodide.toPy({ mjb: document.querySelector("#mojibake").value });
+                const ret = await pyodide.runPython("fix_and_explain(mjb)", { locals })
+                document.querySelector("#result").innerText = ret.text;
+
+                document.querySelector("#steps").innerHTML = ""
+
+                ret.explanation.forEach(i =>
+                    document.querySelector("#steps").innerHTML += "<li><b>"+i[0]+"</b> "+i[1]+"</li>"
+                )
+                
+                document.querySelector("#status").innerText = "Ready."
+                document.querySelectorAll("input").forEach(i => i.disabled = false) 
+          }
+
+        }
+
+        window.onload = main
+      </script>
+  </head>
+  <body>
+        <h1>Mojibake Decoder</h1>
+        <h2>Based on <a href="https://pypi.org/project/ftfy/">ftfy</a> and <a href="https://github.com/pyodide/pyodide">pyodide.</a></h2>
+        <hr />
+        <b>Status:</b> <span id="status">Loading...</span>
+        <hr />
+        Mojibake to decode:<br /> <input type="text" id="mojibake" disabled/>
+        <br />
+        <input type="button" id="submit" value="decode" disabled/>
+        <hr />
+        <b>Result:</b> <span id="result"></span>
+        <hr />
+        <b>Steps:</b> <br />
+        <ul>
+            <span id="steps"></span>
+        </ul>
+  </body>
+</html>
